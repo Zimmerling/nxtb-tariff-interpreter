@@ -1,55 +1,73 @@
 # Tariff Interpreter
 
-___
-This Interpreter is a reverence implementation for computing a JSON formatted bike-sharing tariff model.
+This Interpreter is a reference implementation for computing a JSON formatted bike-sharing tariff model.
+The tariff model is designed to be able to represent as many different types of tariffs as possible and to have a modular structure.
+Thus, it is possible to calculate as many tariffs as possible with a single tariff interpreter and at the same time ensure a uniform format.
 
 ## Contents
 
-___
-
-* [Why this interpreter](#why-this-tariff-schema)
 * [General Interpreter Operation](#general-interpreter-operation)
-* [Tariff JSON Schemas](#tariff-json-schema)
-
-## Why this Tariff-Schema
-
-___
-There are two main reasons why the creation of a new pricing model has begun:
-
-* our current style for represent price tariffs are functions. On the one hand, this has the disadvantage that it leads
-  to inconsistencies between the tariffs and, on the other hand, it is difficult to create and read a tariff.
-* The old model was not able to provide a transparent breakdown of costs incurred similar to a receipt.
-
-These points were tried to improve specifically.
+* [Tariff JSON Schemas](#overview-json-schema)
 
 ## General Interpreter Operation
 
-___
-The Interpreter requires a [Tariff JSON Object](#tariff-json-schema) and a rental period.
+This section will be added when the interface is built.
 
-## Tariff JSON-Schema
+## Overview JSON-Schema
 
-___
-Basically, there are three types of tariffs:
 
-* [SlotBasedTariff:](#slotbasedtariff)
+The modular tariff model is designed in such a way that there are three basic types of tariffs. 
+When creating a tariff, you have to choose one. 
+It is not possible to mix the tariffs.
+To decide which tariff is the right one, you can ask yourself the following questions:
+* Is my tariff distance dependent? 
 
-This type of tariff can represent tariff that depend only on the duration of a rental.
+  -> Then this model is unfortunately not the right one for you, because only tariffs that are time based can be implemented.
 
-* [DayBasedTariff:](#daybasedtariff)
 
-  These tariffs depend not only on the rental period, but also on the number of days started.
-* [TimeBasedTariff:](#timebasedtariff)
+* Is my tariff exclusively dependent on the time driven and not on the time of day or the number of days driven? 
+  
+  -> Then your tariff is a [SlotBasedTariff](#slotbasedtariff).
 
-  These tariffs depend not only on the rental period, but also on the time of day. It is important to cover a whole
-  week.
 
-To make it as simple as possible, all tariffs consist of a modular principle. This allows you to build up your tariff by
-adding slots and rates to your tariff
+* Does my tariff depend not only on the duration of the trip, but also on the time of day (e.g. you pay more if you
+  travel between eight and nine than if you travel between ten and eleven)?
+ 
+  -> Then your tariff is a [TimeBasedTariff](#timebasedtariff).
+
+
+* Is my tariff not only based on the time I ride, but also on the number of days I ride (e.g. if I rent a bike for two days, the price per day is more expensive than if I rent the bike for a week)?
+  
+  -> Then your tariff is a [DayBasedTariff](#daybasedtariff).
+
+
+All tariffs are based on a modular slot system. 
+The difference between the three tariff models is only the definition of the slots and the calling of the slots. 
+Each slot must be assigned a rate. 
+The rate is used for the actual calculation of the price. 
+There are also different types of rates: 
+* The [FixedRate](#fixedrate) is the simpler form, with which one can specify a fixed amount, which is computed, as soon as this Slot is called.
+
+
+* With the [TimeBasedRate](#timebasedrate) you can define an interval in which a fixed amount is calculated. 
+With each repetition of this interval a fixed amount is added to it. 
+The interval does not have to be completely finished, the amount is added when entering the interval.
+
+
 
 ### SlotBasedTariff
 
-___
+
+
+A SlotBasedTariff is structured in such a way that the duration of the trip is split into slots. 
+The slots must start at zero and continue seamlessly, because all slots are used until the end of the trip to calculate the final price. 
+The price is calculated for each slot individually and then added up. 
+
+
+
+It is also possible to define a **billing interval**. 
+This causes that after this time interval the slots are calculated from the beginning.
+
 
 | Field Name      | Required |                Type                | Defines                                                                           |
 |-----------------|:--------:|:----------------------------------:|-----------------------------------------------------------------------------------|
@@ -149,8 +167,6 @@ ___
 
 ### DayBasedTariff
 
----
-
 | Field Name      | Required |                Type                | Defines                                                                           |
 |-----------------|:--------:|:----------------------------------:|-----------------------------------------------------------------------------------|
 | type            |   Yes    |               String               | Necessary to identify the tariff type. In this case 'DayBasedTariff'              |
@@ -238,17 +254,17 @@ ___
 }
 ```
 
-* For a rental period of 95 minutes you pay 3€ (95 minutes - 10 minutes staticGoodwill = 85 minutes -> 3 * 100)
-* For a rental period from Monday 7 am to Monday 5 pm you pay 8 €.
+* For a rental period of 95 minutes you pay 3€ (95 minutes - 10 minutes staticGoodwill = 85 minutes -> 3 x 100)
+* For a rental period from Monday 7 am to Monday 5 pm you pay 8€.
     * the duration is longer than 3 hours -> the first slot is not usable.
-    * The count of days rented is one -> the second slot is usable -> 1 * 8€
+    * The count of days rented is one -> the second slot is usable -> 1 x 8€
 * For a rental period from Monday 5 pm to Tuesday 3 am you pay 16 €.
     * the duration is longer than 3 hours -> the first slot is not usable.
-    * The count of days rented is two -> the second slot is usable -> 2 * 8€
+    * The count of days rented is two -> the second slot is usable -> 2 x 8€
 * For a rental period from Monday 5 pm to Wednesday 6am am you pay 21€.
     * the duration is longer than 3 hours -> the first slot is not usable.
     * the duration is longer than 2 Days -> the second slot is not usable.
-    * The count of days rented is three -> the second slot is usable ->  3 * 7€
+    * The count of days rented is three -> the second slot is usable ->  3 x 7€
 
 #### Day based Slots
 
@@ -288,7 +304,6 @@ If the number of days rented is between 1 and 3, rate 1 is charged for each day.
 
 ### TimeBasedTariff
 
-___
 
 | Field Name      | Required |              Type               | Defines                                                                           |
 |-----------------|:--------:|:-------------------------------:|-----------------------------------------------------------------------------------|
@@ -367,7 +382,7 @@ ___
 
 * If your rental is from Monday 8am to Wednesday 10pm you pay once 1€.
 * If you rent from Friday 10pm to Sunday 10am you pay once 2€.
-* If you rent from Monday 8am to Saturday 10am, you pay €3 because you cut both time periods.
+* If you rent from Monday 8am to Saturday 10am, you pay 3€ because you cut both time periods.
 
 #### TimeSlot
 
@@ -415,7 +430,6 @@ ___
 
 ### Objects used in all Tariffs
 
-___
 
 #### Goodwill
 
@@ -595,13 +609,13 @@ The duration in this slot can be ignored. When this slot is started, 3€ will b
 ```
 
 * For the rental of 10 minutes in this slot, you will pay 4€ -> The calculated price is smaller than the minPrice (200
-  basePrice + 1 * 100 pricePerInterval < 400 minPrice)
+  basePrice + 1 x 100 pricePerInterval < 400 minPrice)
 * For the rental of 38 minutes in this slot, you will pay 5€
 
   200 basePrice
 
-  \+ two times a full interval + 1 started interval -> 3 * 100
+  \+ two times a full interval + 1 started interval -> 3 x 100
 
   = 500
 * For the rental of 140min in this slot, you will pay 10€ -> The calculated price is bigger then the maxPrice (200
-  basePrice + 10 * 100 pricePerInterval > 1000 maxPrice)
+  basePrice + 10 x 100 pricePerInterval > 1000 maxPrice)
